@@ -59,9 +59,10 @@
 		</style>
 	</head>
 	<body ng-controller="StatusController" class="{{buildStatus}}">
-		<ul>
-			<li ng-repeat="build in builds" ng-class="build.status">{{ build.project }} - {{ build.name }}</li>
-		</ul>
+    <div id="error-box">
+      <ul>
+        <li ng-repeat="build in builds" ng-class="build.status">{{ build.project }} - {{ build.name }}</li>
+      </ul>
     </div>
     <div id="success-box" class="">
         <p class="big-thumb"><i class="icon-thumbs-up"></i><br/>ALL GOOD</p>
