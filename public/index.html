@@ -78,7 +78,7 @@
 				self.socket.on('last-builds', function(builds){
 					console.log(builds);
 					$scope.builds = builds;
-					$scope.anyFailed = _.chain(builds).where(function(build){ return build.status == 'failure'; }).any().value();
+					$scope.anyFailed = _.chain(builds).some(function(build) { return build.status == "failure"; }).value();
 					$scope.buildStatus = $scope.anyFailed ? 'failure' : 'success';
 					$scope.$apply();
 				});
