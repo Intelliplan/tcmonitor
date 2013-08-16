@@ -4,52 +4,17 @@
 		<script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.1/angular.min.js"></script>
 		<script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
 		<script src="/socket.io/socket.io.js"></script>
-		<link href="reset.css" type="text/css" rel="stylesheet"/>
-		<style type="text/css">
-			body {
-				background-color: white;
-				font-family: arial;
-				font-size: 3em;
-				font-weight: bolder;
-			}
-			@keyframes failure {
-				from { background-color: white; }
-				to { background-color: red; }
-			}
-			@-webkit-keyframes failure {
-				from { background-color: white; }
-				to { background-color: red; }
-			}
-			body.failure {
-				animation: failure 1s infinite;
-				-webkit-animation: failure 1s infinite;
-			}
-			li.failure:before {	content: '\00bb';	}
-			li.failure:after { content: '\00ab'; }
-			li { color: lightgrey; margin: 0.5em; }
-			li.failure { color: black; }
-		</style>
+		<script src="app.js"></script>
+		<link href="main.css" type="text/css" rel="stylesheet"/>
 	</head>
-	<body ng-controller="StatusController" class="{{anyFailed&&'failure'}}">
-		<ul>
-			<li ng-repeat="build in builds" ng-class="build.status">{{ build.project }} - {{ build.name }}</li>
-		</ul>
-
-		<script>
-			angular.module('tcmonitor', []).factory('io', function(){ return io; });
-
-			var StatusController = function($scope, io){
-				$scope.builds = [];
-				var self = this;
-				self.socket = io.connect();
-				self.socket.on('last-builds', function(builds){
-					console.log(builds);
-					$scope.builds = builds;
-					$scope.anyFailed = _.chain(builds).where(function(build){ return build.status == 'failure'; }).any();
-					$scope.$apply();
-				});
-			};
-			StatusController.$inject = ['$scope', 'io'];
-		</script>
+	<body ng-controller="StatusController" class="{{buildStatus}}">
+		<div id="error-box" class="">
+			<ul>
+				<li ng-repeat="build in builds" class="{{build.activity}} {{build.status}}">{{ build.name }}</li>
+			</ul>
+		</div>
+		<div id="success-box" class="">
+			<p class="big-thumb"><i class="icon-thumbs-up"></i><br/>ALL GOOD</p>
+		</div>
 	</body>
 </html>

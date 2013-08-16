@@ -1,20 +1,10 @@
-var fs = require('fs'),
-		path = require('path'),
-		config;
-try {
-	config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'config.json')));
-	config.listen = config.listen;
-} catch (e) {
-	console.error('Error loading configuration: ', e);
-	process.exit(1);
-}
-
 var express = require('express');
 var app = express();
 var http = require('http');
 var server = http.createServer(app);
 var io = require('socket.io').listen(server);
 
+var config = require('./config.json');
 io.configure('production', function(){
 	io.set('log level', 0);
 }).configure('development', function(){
@@ -36,48 +26,45 @@ var request = require('request')
 		}
 	});
 
-var getBuildTypes = function(){
+function getLastBuilds(){
 	var deferred = when.defer();
 	request.get(
-		config.teamcity.host + '/httpAuth/app/rest/buildTypes',
+		config.teamcity.host + '/httpAuth/app/rest/cctray/projects.xml',
 		function(err, res, body){
-			if(err) { deferred.reject(err); return; }
-			deferred.resolve(body.buildType);
+			if(err) {
+				console.error(err, res);
+				deferred.reject(err);
+				return;
+			}
+			deferred.resolve(
+				_(body.Project).map(function(project){
+					return {
+						activity: project.activity.toLowerCase(),
+						status: project.lastBuildStatus.toLowerCase(),
+						label: project.lastBuildLabel,
+						name: project.name
+					};
+				})
+			);
 	});
 	return deferred.promise;
 };
 
-var getLastBuildFor = function(type){
-	var build = {
-			name: type.name,
-			project: type.projectName,
-			status: 'unknown'
-	};
-	var deferred = when.defer();
-	request.get(
-		config.teamcity.host + type.href + '/builds?count=1',
-		function(err, res, body){
-			if(err) { deferred.reject(err); return; }
-			build.status = body.build[0].status.toLowerCase();
-			deferred.resolve(build);
-		});
-	return deferred.promise;
-};
+function reschedule(){
+	setTimeout(refresh, config.refreshInterval);
+}
 
-var refresh = function (){
+function refresh(){
 	console.info('refreshing...');
-	getBuildTypes().then(function(types){
-		var buildPromises = _(types).map(getLastBuildFor);
-		when.all(buildPromises).then(
-			function success(builds){
-			console.info('done');
-			lastSeenBuilds = builds;
-			io.sockets.emit('last-builds', lastSeenBuilds);
-			setTimeout(refresh, 5000);
-		}, function failure(err){
-			console.error(err);
-		});
-	});
+	getLastBuilds()
+	.then(function success(builds){
+		console.info('done');
+		lastSeenBuilds = builds;
+	}, console.error)
+	.then(function notify(){
+		io.sockets.emit('last-builds', lastSeenBuilds);
+	})
+	.then(reschedule,reschedule); //FIX: reschedule both when successfull and on failure, awaiting when's new "settled" concept
 };
 
 var lastSeenBuilds = [];
